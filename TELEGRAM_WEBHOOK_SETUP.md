@@ -27,7 +27,6 @@ ADMIN_API_KEY=your_secure_admin_api_key_here
 WEBHOOK_SECRET=your_secure_webhook_secret_here
 
 # Application Configuration
-DEBUG=false
 ```
 
 ### 1.2 Generate Webhook Secret

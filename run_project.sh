@@ -22,7 +22,6 @@ if [ ! -f .env ]; then
     echo "# Telegram Bot Configuration
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 WEBHOOK_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
-DEBUG=false" > .env
     echo "✅ Sample .env file created. Please update it with your actual values."
 fi
 # activate venv

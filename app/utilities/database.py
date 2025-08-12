@@ -8,7 +8,6 @@ import sqlalchemy as sa
 # Create the engine with proper configuration
 engine = create_async_engine(
     settings.db_url,
-    echo=settings.debug,
     poolclass=StaticPool,
     connect_args={
         "check_same_thread": False,

@@ -296,7 +296,6 @@ migrations/
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather | Yes | - |
 | `ADMIN_API_KEY` | Secret key for admin API | Yes | - |
 | `WEBHOOK_SECRET` | Webhook verification secret | No | - |
-| `DEBUG` | Enable debug mode | No | false |
 
 ## Development
 
@@ -377,7 +376,6 @@ Configure the following secrets in your GitHub repository (**Settings** → **Se
 
 **Optional Secrets:**
 - `DB_URL` - Database URL (defaults to SQLite)
-- `DEBUG` - Debug mode (defaults to `false`)
 - `APP_NAME` - Application name (defaults to `TinyVault`)
 
 #### Deploy

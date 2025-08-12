@@ -56,7 +56,6 @@
           TELEGRAM_BOT_TOKEN={{ TELEGRAM_BOT_TOKEN }}
           ADMIN_API_KEY={{ ADMIN_API_KEY }}
           WEBHOOK_SECRET={{ WEBHOOK_SECRET }}
-          DEBUG={{ DEBUG | default('false') }}
           EC2_HOST={{ EC2_HOST | default('localhost') }}
           APP_NAME={{ APP_NAME | default('TinyVault') }}
   
@@ -68,7 +67,6 @@
           --build-arg DB_URL="{{ DB_URL }}" \
           --build-arg TELEGRAM_BOT_TOKEN="{{ TELEGRAM_BOT_TOKEN }}" \
           --build-arg WEBHOOK_SECRET="{{ WEBHOOK_SECRET }}" \
-          --build-arg DEBUG="{{ DEBUG }}" \
           --build-arg EC2_HOST="{{ EC2_HOST }}" \
           --build-arg APP_NAME="{{ APP_NAME }}"
         docker-compose up -d
