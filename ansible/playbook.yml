@@ -49,65 +49,38 @@
         rm -rf TinyVault-main main.zip
       changed_when: false
 
-    - name: Set proper permissions
-      raw: sudo chown -R ec2-user:ec2-user /opt/tinyvault
-      changed_when: false
-
-    - name: Create .env file for TinyVault from environment variables
+  
+    - name: Build Docker image
       raw: |
-        cd /opt/tinyvault && \
-        cat > .env << 'EOF'
-        DB_URL=${TINYVAULT_DB_URL:-sqlite+aiosqlite:///./data/tinyvault.db}
-        TELEGRAM_BOT_TOKEN=${TINYVAULT_TELEGRAM_BOT_TOKEN}
-        ADMIN_API_KEY=${TINYVAULT_ADMIN_API_KEY}
-        WEBHOOK_SECRET=${TINYVAULT_WEBHOOK_SECRET}
-        DEBUG=${TINYVAULT_DEBUG:-false}
-        EC2_HOST=${EC2_HOST:-localhost}
-        APP_NAME=${TINYVAULT_APP_NAME:-TinyVault}
-        EOF
-        chmod 600 .env
-      changed_when: false
-      environment:
-        TINYVAULT_DB_URL: "{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}"
-        TINYVAULT_TELEGRAM_BOT_TOKEN: "{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}"
-        EC2_HOST: "{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}"
-        TINYVAULT_ADMIN_API_KEY: "{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}"
-        TINYVAULT_WEBHOOK_SECRET: "{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}"
-        TINYVAULT_DEBUG: "{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}"
-        TINYVAULT_APP_NAME: "{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
-
-    - name: Build Docker container
-      community.docker.docker_image:
-        name: tinyvault-app
-        build:
-          path: /opt/tinyvault
-        source: build
-        pull: yes
-        args:
-          ADMIN_API_KEY: "{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}"
-          DB_URL: "{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}"
-          TELEGRAM_BOT_TOKEN: "{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}"
-          WEBHOOK_SECRET: "{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}"
-          DEBUG: "{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}"
-          EC2_HOST: "{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}"
-          APP_NAME: "{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
+        cd /opt/tinyvault
+        sudo docker build \
+          --build-arg ADMIN_API_KEY="{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}" \
+          --build-arg DB_URL="{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}" \
+          --build-arg TELEGRAM_BOT_TOKEN="{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}" \
+          --build-arg WEBHOOK_SECRET="{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}" \
+          --build-arg DEBUG="{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}" \
+          --build-arg EC2_HOST="{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}" \
+          --build-arg APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}" \
+          -t tinyvault-app .
+      changed_when: true
 
     - name: Run Docker container
-      community.docker.docker_container:
-        name: tinyvault-app
-        image: tinyvault-app
-        state: started
-        restart_policy: always
-        ports:
-          - "80:8000"
-        env:
-          DB_URL: "{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}"
-          TELEGRAM_BOT_TOKEN: "{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}"
-          ADMIN_API_KEY: "{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}"
-          WEBHOOK_SECRET: "{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}"
-          DEBUG: "{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}"
-          EC2_HOST: "{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}"
-          APP_NAME: "{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
+      raw: |
+        sudo docker stop tinyvault-app || true
+        sudo docker rm tinyvault-app || true
+        sudo docker run -d \
+          --name tinyvault-app \
+          --restart always \
+          -p 80:8000 \
+          -e DB_URL="{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}" \
+          -e TELEGRAM_BOT_TOKEN="{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}" \
+          -e ADMIN_API_KEY="{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}" \
+          -e WEBHOOK_SECRET="{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}" \
+          -e DEBUG="{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}" \
+          -e EC2_HOST="{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}" \
+          -e APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}" \
+          tinyvault-app
+      changed_when: true
 
     - name: Wait for container to be ready
       pause:
