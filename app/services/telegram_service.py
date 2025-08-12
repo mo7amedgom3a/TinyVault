@@ -84,17 +84,86 @@ class TelegramService:
                         logger.error(f"Telegram API error: {result.get('description')}")
                         return False
                 else:
-                    logger.error(f"Failed to send message: HTTP {response.status_code}")
+                    # Get the response text for debugging
+                    try:
+                        error_response = response.json()
+                        error_description = error_response.get('description', 'No description')
+                        logger.error(f"Failed to send message: HTTP {response.status_code} - {error_description}")
+                        logger.error(f"Error response: {error_response}")
+                    except:
+                        response_text = response.text
+                        logger.error(f"Failed to send message: HTTP {response.status_code} - {response_text}")
+                    
+                    # Also log the message data for debugging
+                    logger.error(f"Message data that failed: {message_data}")
                     return False
                     
         except Exception as e:
             logger.error(f"Error sending Telegram response: {e}")
             return False
     
+    async def answer_callback_query(self, callback_query_id: str, text: str = None, show_alert: bool = False) -> bool:
+        """
+        Answer a callback query to acknowledge it to Telegram.
+        
+        Args:
+            callback_query_id: Unique identifier for the callback query
+            text: Text to show to user (optional)
+            show_alert: Whether to show as alert or toast (default: False)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not settings.telegram_bot_token:
+                logger.error("Telegram bot token not configured")
+                return False
+            
+            # Prepare the callback answer data
+            callback_data = {
+                "callback_query_id": callback_query_id,
+                "show_alert": show_alert
+            }
+            
+            if text:
+                callback_data["text"] = text
+            
+            # Send callback answer via Telegram Bot API
+            url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/answerCallbackQuery"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=callback_data, timeout=10.0)
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    if result.get("ok"):
+                        logger.debug(f"Callback query answered successfully")
+                        return True
+                    else:
+                        logger.error(f"Telegram API error answering callback: {result.get('description')}")
+                        return False
+                else:
+                    # Get the response text for debugging
+                    try:
+                        error_response = response.json()
+                        error_description = error_response.get('description', 'No description')
+                        logger.error(f"Failed to answer callback query: HTTP {response.status_code} - {error_description}")
+                        logger.error(f"Error response: {error_response}")
+                    except:
+                        response_text = response.text
+                        logger.error(f"Failed to answer callback query: HTTP {response.status_code} - {response_text}")
+                    
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error answering callback query: {e}")
+            return False
+    
     def _keyboard_to_dict(self, keyboard) -> dict:
         """Convert InlineKeyboardMarkup to serializable dictionary."""
         try:
             if not keyboard or not hasattr(keyboard, 'inline_keyboard'):
+                logger.debug("No keyboard or keyboard has no inline_keyboard attribute")
                 return {}
             
             keyboard_data = {
@@ -116,6 +185,7 @@ class TelegramService:
                 
                 keyboard_data["inline_keyboard"].append(row_data)
             
+            logger.debug(f"Converted keyboard to dict: {keyboard_data}")
             return keyboard_data
             
         except Exception as e:
@@ -636,6 +706,9 @@ class TelegramService:
         logger.info(f"Processing callback query from user {user_id}: {callback_data}")
         
         try:
+            # First, answer the callback query to acknowledge it to Telegram
+            await self.answer_callback_query(callback_query.id)
+            
             # Update user's last seen
             user = await self.user_service.create_or_update_user(user_id)
             
@@ -659,6 +732,11 @@ class TelegramService:
             
         except Exception as e:
             logger.error(f"Error processing callback query: {e}")
+            # Try to answer the callback query even if processing failed
+            try:
+                await self.answer_callback_query(callback_query.id, "An error occurred. Please try again.")
+            except:
+                pass
             return {
                 "status": "error",
                 "error": str(e),
