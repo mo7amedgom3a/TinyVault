@@ -149,7 +149,6 @@ async def get_info():
     """Get application configuration information."""
     return {
         "app_name": settings.app_name,
-        "debug": settings.debug,
         "database_url": settings.db_url.replace(settings.db_url.split('@')[0].split(':')[-1], '***') if '@' in settings.db_url else settings.db_url,
         "telegram_bot_configured": bool(settings.telegram_bot_token),
         "admin_api_configured": bool(settings.admin_api_key),

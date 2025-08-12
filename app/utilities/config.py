@@ -18,8 +18,7 @@ class Settings(BaseSettings):
     webhook_secret: Optional[str] = os.getenv("WEBHOOK_SECRET")
     
     app_name: str = "TinyVault"
-    debug: bool = os.getenv("DEBUG", "True").lower() == "true"
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = False
