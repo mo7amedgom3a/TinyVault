@@ -1,8 +1,9 @@
-name: Deploy TinyVault to EC2
+name: Deploy with Ansible
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       environment:
@@ -14,118 +15,45 @@ on:
           - production
           - staging
 
-env:
-  EC2_HOST: ${{ secrets.EC2_HOST }}
-  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-  DB_URL: ${{ secrets.DB_URL }}
-  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-  WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}  
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'production' }}
-    
+
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          
+
+      # 2️⃣ Install Ansible
       - name: Install Ansible
         run: |
-          python -m pip install --upgrade pip
-          pip install ansible
-          
-      - name: Setup SSH key
-        run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/aws_keys.pem
-          chmod 600 ~/aws_keys.pem
-          echo "SSH key permissions: $(ls -la ~/aws_keys.pem)"
+          sudo apt update
+          sudo apt install -y ansible
 
-      - name: Validate SSH key and test connection
+      # 3️⃣ Configure SSH Key
+      - name: Set up SSH
         run: |
-          echo "=== SSH Key Validation ==="
-          # Check SSH key format
-          echo "First line of key:"
-          head -1 ~/aws_keys.pem
-          echo "Last line of key:"
-          tail -1 ~/aws_keys.pem
-          
-          # Validate key format using ssh-keygen
-          echo "=== SSH Key Analysis ==="
-          if ssh-keygen -l -f ~/aws_keys.pem; then
-            echo "✅ SSH key format is valid"
-          else
-            echo "❌ SSH key format is invalid"
-            exit 1
-          fi
-          
-          # Test SSH connection with detailed debugging
-          echo "=== Testing SSH Connection ==="
-          echo "Testing connection to: ${{ secrets.EC2_HOST }}"
-          
-          # Add host to known_hosts to avoid prompt
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          # Test with ec2-user
-          echo "Testing with ec2-user..."
-          if timeout 30 ssh -v -i ~/aws_keys.pem -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes ec2-user@${{ secrets.EC2_HOST }} "echo 'Connection successful: ec2-user'" 2>&1; then
-            echo "ANSIBLE_USER=ec2-user" >> $GITHUB_ENV
-            echo "✅ SSH connection successful with ec2-user"
-          else
-            echo "❌ SSH connection failed with ec2-user"
-            
-            # Test with ubuntu
-            echo "Testing with ubuntu..."
-            if timeout 30 ssh -v -i ~/aws_keys.pem -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes ubuntu@${{ secrets.EC2_HOST }} "echo 'Connection successful: ubuntu'" 2>&1; then
-              echo "ANSIBLE_USER=ubuntu" >> $GITHUB_ENV
-              echo "✅ SSH connection successful with ubuntu"
-            else
-              echo "❌ SSH connection failed with both ec2-user and ubuntu"
-              echo ""
-              echo "=== Troubleshooting Information ==="
-              echo "1. Verify the SSH_PRIVATE_KEY secret contains the complete private key"
-              echo "2. Ensure the private key matches the public key associated with this EC2 instance"
-              echo "3. Check EC2 Security Group allows SSH (port 22) from 0.0.0.0/0"
-              echo "4. Verify the EC2 instance is running and accessible"
-              echo ""
-              exit 1
-            fi
-          fi
-          
-      - name: Update Ansible inventory with environment variables
-        run: |
-          cd ansible
-          # Update inventory with the actual EC2 host and SSH key path
-          sed -i "s|ansible_host: .*|ansible_host: ${{ secrets.EC2_HOST }}|" inventory.yml
-          sed -i "s|ansible_ssh_private_key_file: .*|ansible_ssh_private_key_file: ~/aws_keys.pem|" inventory.yml
-          # Update username if detected
-          if [ ! -z "$ANSIBLE_USER" ]; then
-            sed -i "s|ansible_user: .*|ansible_user: $ANSIBLE_USER|" inventory.yml
-          fi
-          # Verify the inventory file
-          echo "=== Final Inventory Configuration ==="
-          cat inventory.yml
-          
-      - name: Deploy to EC2
-        run: |
-          cd ansible
-          ansible-playbook -i inventory.yml playbook.yml -v  
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      # 4️⃣ Run Ansible Playbook with secret vars
+      - name: Run Ansible Playbook
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          ANSIBLE_USER: ${{ env.ANSIBLE_USER }}
-          # Application secrets passed to Ansible
           TINYVAULT_DB_URL: ${{ secrets.DB_URL || 'sqlite+aiosqlite:///./data/tinyvault.db' }}
           TINYVAULT_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TINYVAULT_ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
           TINYVAULT_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
           TINYVAULT_DEBUG: ${{ secrets.DEBUG || 'false' }}
           TINYVAULT_APP_NAME: ${{ secrets.APP_NAME || 'TinyVault' }}
-          
+        run: |
+          cd ansible
+          ansible-playbook -i inventory.yml playbook.yml -v
+
+      # 5️⃣ Cleanup SSH key
       - name: Cleanup SSH key
         if: always()
-        run: rm -f ~/aws_keys.pem
+        run: rm -f ~/.ssh/id_rsa
