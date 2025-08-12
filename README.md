@@ -360,6 +360,34 @@ When modifying existing models:
 
 ## Deployment
 
+### Automated Deployment (Recommended)
+
+TinyVault supports automated deployment to EC2 using GitHub Actions and Ansible.
+
+#### Setup GitHub Secrets
+
+Configure the following secrets in your GitHub repository (**Settings** → **Secrets and variables** → **Actions**):
+
+**Required Secrets:**
+- `EC2_HOST` - Your EC2 instance public IP
+- `SSH_PRIVATE_KEY` - Your AWS private key file content (e.g., `aws_keys.pem`)
+- `TELEGRAM_BOT_TOKEN` - Telegram bot token from BotFather
+- `ADMIN_API_KEY` - API key for admin access
+- `WEBHOOK_SECRET` - Secret for webhook security
+
+**Optional Secrets:**
+- `DB_URL` - Database URL (defaults to SQLite)
+- `DEBUG` - Debug mode (defaults to `false`)
+- `APP_NAME` - Application name (defaults to `TinyVault`)
+
+#### Deploy
+
+1. Push to `main` branch or manually trigger the workflow
+2. Monitor deployment in **Actions** tab
+3. Access your application at `http://[EC2_HOST]:8000`
+
+For detailed setup instructions, see [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
+
 ### Docker
 
 ```bash

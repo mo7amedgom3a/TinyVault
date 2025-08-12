@@ -1,0 +1,73 @@
+name: Deploy TinyVault to EC2
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+  DB_URL: ${{ secrets.DB_URL }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+  WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}  
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+          
+      - name: Create SSH key file
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/aws_keys.pem
+          chmod 600 ~/aws_keys.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Update Ansible inventory with environment variables
+        run: |
+          cd ansible
+          # Update inventory with the actual EC2 host from secrets
+          sed -i "s/ansible_host: .*/ansible_host: ${{ secrets.EC2_HOST }}/" inventory.yml
+          
+      - name: Deploy to EC2
+        run: |
+          cd ansible
+          ansible-playbook -i inventory.yml playbook.yml -v  
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          SSH_PRIVATE_KEY_PATH: ~/aws_keys.pem
+          # Application secrets passed to Ansible
+          TINYVAULT_DB_URL: ${{ secrets.DB_URL || 'sqlite+aiosqlite:///./data/tinyvault.db' }}
+          TINYVAULT_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TINYVAULT_ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+          TINYVAULT_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          TINYVAULT_DEBUG: ${{ secrets.DEBUG || 'false' }}
+          TINYVAULT_APP_NAME: ${{ secrets.APP_NAME || 'TinyVault' }}
+          
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/aws_keys.pem

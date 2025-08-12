@@ -1,0 +1,90 @@
+---
+- name: Deploy TinyVault app from GitHub with Docker
+  hosts: tinyvault_prod
+
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Clean up problematic Docker repository
+      raw: |
+        sudo yum-config-manager --disable docker-ce-stable || true
+        sudo rm -f /etc/yum.repos.d/docker-ce.repo || true
+      changed_when: false
+
+    - name: Update yum cache
+      raw: sudo yum update -y
+      changed_when: false
+
+    - name: Install required packages
+      raw: |
+        sudo yum install -y yum-utils device-mapper-persistent-data lvm2 wget unzip --allowerasing
+      changed_when: false
+
+    - name: Install Docker for Amazon Linux
+      raw: |
+        sudo yum install -y docker
+        sudo service docker start
+        sudo chkconfig docker on
+        sudo groupadd docker || true
+        sudo usermod -a -G docker ec2-user
+      changed_when: false
+
+    - name: Install Docker Compose
+      raw: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+      changed_when: false
+
+    - name: Create application directory
+      raw: sudo mkdir -p /opt/tinyvault && sudo chown ec2-user:ec2-user /opt/tinyvault
+      changed_when: false
+
+    - name: Download project from GitHub
+      raw: |
+        cd /opt
+        wget https://github.com/mo7amedgom3a/TinyVault/archive/refs/heads/main.zip
+        unzip main.zip
+        # copy the content of TinyVault-main to /opt/tinyvault
+        sudo cp -r TinyVault-main/* /opt/tinyvault/
+        rm -rf TinyVault-main main.zip
+
+      changed_when: false
+
+    - name: Set proper permissions
+      raw: sudo chown -R ec2-user:ec2-user /opt/tinyvault
+      changed_when: false
+
+    - name: Create .env file for TinyVault from environment variables
+      raw: |
+        cd /opt/tinyvault
+        cp env.example .env
+        # Update .env with the values from environment variables
+        sed -i "s|DB_URL=.*|DB_URL=${TINYVAULT_DB_URL:-sqlite+aiosqlite:///./data/tinyvault.db}|" .env
+        sed -i "s|TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=${TINYVAULT_TELEGRAM_BOT_TOKEN:-}|" .env
+        sed -i "s|EC2_HOST=.*|EC2_HOST=${EC2_HOST:-localhost}|" .env
+        sed -i "s|ADMIN_API_KEY=.*|ADMIN_API_KEY=${TINYVAULT_ADMIN_API_KEY:-}|" .env
+        sed -i "s|WEBHOOK_SECRET=.*|WEBHOOK_SECRET=${TINYVAULT_WEBHOOK_SECRET:-}|" .env
+        sed -i "s|DEBUG=.*|DEBUG=${TINYVAULT_DEBUG:-false}|" .env
+        sed -i "s|APP_NAME=.*|APP_NAME=${TINYVAULT_APP_NAME:-TinyVault}|" .env
+      changed_when: false
+      environment:
+        TINYVAULT_DB_URL: "{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}"
+        TINYVAULT_TELEGRAM_BOT_TOKEN: "{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}"
+        EC2_HOST: "{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}"
+        TINYVAULT_ADMIN_API_KEY: "{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}"
+        TINYVAULT_WEBHOOK_SECRET: "{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}"
+        TINYVAULT_DEBUG: "{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}"
+        TINYVAULT_APP_NAME: "{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
+
+    - name: Build and start Docker containers
+      raw: |
+        cd /opt/tinyvault
+        sudo docker-compose up -d --build
+      changed_when: false
+
+    - name: Wait for containers to be ready
+      raw: sleep 45
+      changed_when: false
+
+   
