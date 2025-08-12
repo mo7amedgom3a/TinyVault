@@ -48,7 +48,17 @@ jobs:
 
       - name: Test SSH connection
         run: |
-          ssh -i ~/aws_keys.pem -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "echo 'SSH connection successful'"
+          # Test SSH connection and determine correct username
+          if ssh -i ~/aws_keys.pem -o StrictHostKeyChecking=no -o ConnectTimeout=30 ec2-user@${{ secrets.EC2_HOST }} "echo 'SSH connection successful with ec2-user'"; then
+            echo "ANSIBLE_USER=ec2-user" >> $GITHUB_ENV
+            echo "✅ SSH connection successful with ec2-user"
+          elif ssh -i ~/aws_keys.pem -o StrictHostKeyChecking=no -o ConnectTimeout=30 ubuntu@${{ secrets.EC2_HOST }} "echo 'SSH connection successful with ubuntu'"; then
+            echo "ANSIBLE_USER=ubuntu" >> $GITHUB_ENV
+            echo "✅ SSH connection successful with ubuntu"
+          else
+            echo "❌ SSH connection failed with both ec2-user and ubuntu"
+            exit 1
+          fi
           
       - name: Update Ansible inventory with environment variables
         run: |
