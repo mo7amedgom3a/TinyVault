@@ -58,15 +58,30 @@
     - name: Create .env file for TinyVault from environment variables
       raw: |
         cd /opt/tinyvault
-        cp env.example .env
-        # Update .env with the values from environment variables
-        sed -i "s|DB_URL=.*|DB_URL=${TINYVAULT_DB_URL:-sqlite+aiosqlite:///./data/tinyvault.db}|" .env
-        sed -i "s|TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=${TINYVAULT_TELEGRAM_BOT_TOKEN:-}|" .env
-        sed -i "s|EC2_HOST=.*|EC2_HOST=${EC2_HOST:-localhost}|" .env
-        sed -i "s|ADMIN_API_KEY=.*|ADMIN_API_KEY=${TINYVAULT_ADMIN_API_KEY:-}|" .env
-        sed -i "s|WEBHOOK_SECRET=.*|WEBHOOK_SECRET=${TINYVAULT_WEBHOOK_SECRET:-}|" .env
-        sed -i "s|DEBUG=.*|DEBUG=${TINYVAULT_DEBUG:-false}|" .env
-        sed -i "s|APP_NAME=.*|APP_NAME=${TINYVAULT_APP_NAME:-TinyVault}|" .env
+        # Create .env file with actual values from environment variables
+        cat > .env << EOF
+        # Database Configuration
+        DB_URL=${TINYVAULT_DB_URL:-sqlite+aiosqlite:///./data/tinyvault.db}
+        
+        # Telegram Bot Configuration
+        TELEGRAM_BOT_TOKEN=${TINYVAULT_TELEGRAM_BOT_TOKEN:-}
+        
+        # Admin API Configuration
+        ADMIN_API_KEY=${TINYVAULT_ADMIN_API_KEY:-}
+        
+        # Webhook Security (Optional)
+        WEBHOOK_SECRET=${TINYVAULT_WEBHOOK_SECRET:-}
+        
+        # Application Configuration
+        DEBUG=${TINYVAULT_DEBUG:-false}
+        EC2_HOST=${EC2_HOST:-localhost}
+        APP_NAME=${TINYVAULT_APP_NAME:-TinyVault}
+        EOF
+        
+        # Show the created .env file for debugging
+        echo "=== Created .env file ==="
+        cat .env
+        echo "========================="
       changed_when: false
       environment:
         TINYVAULT_DB_URL: "{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}"
@@ -77,11 +92,48 @@
         TINYVAULT_DEBUG: "{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}"
         TINYVAULT_APP_NAME: "{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
 
-    - name: Build and start Docker containers
+    - name: Build and start Docker containers with environment variables
       raw: |
         cd /opt/tinyvault
-        sudo docker-compose up -d --build
+        # Export environment variables for Docker
+        export DB_URL="${TINYVAULT_DB_URL:-sqlite+aiosqlite:///./data/tinyvault.db}"
+        export TELEGRAM_BOT_TOKEN="${TINYVAULT_TELEGRAM_BOT_TOKEN:-}"
+        export ADMIN_API_KEY="${TINYVAULT_ADMIN_API_KEY:-}"
+        export WEBHOOK_SECRET="${TINYVAULT_WEBHOOK_SECRET:-}"
+        export DEBUG="${TINYVAULT_DEBUG:-false}"
+        export EC2_HOST="${EC2_HOST:-localhost}"
+        export APP_NAME="${TINYVAULT_APP_NAME:-TinyVault}"
+        
+        # Show environment variables for debugging
+        echo "=== Environment Variables ==="
+        echo "DB_URL=$DB_URL"
+        echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:+***MASKED***}"
+        echo "ADMIN_API_KEY=${ADMIN_API_KEY:+***MASKED***}"
+        echo "WEBHOOK_SECRET=${WEBHOOK_SECRET:+***MASKED***}"
+        echo "DEBUG=$DEBUG"
+        echo "EC2_HOST=$EC2_HOST"
+        echo "APP_NAME=$APP_NAME"
+        echo "============================="
+        
+        # Stop existing containers if any
+        sudo docker-compose down || true
+        
+        # Build and start with environment variables
+        sudo -E docker-compose up -d --build
+        
+        # Verify container environment
+        echo "=== Container Environment Check ==="
+        sudo docker inspect tinyvault-app | grep -A 20 '"Env":'
+        echo "=================================="
       changed_when: false
+      environment:
+        TINYVAULT_DB_URL: "{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}"
+        TINYVAULT_TELEGRAM_BOT_TOKEN: "{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}"
+        EC2_HOST: "{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}"
+        TINYVAULT_ADMIN_API_KEY: "{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}"
+        TINYVAULT_WEBHOOK_SECRET: "{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}"
+        TINYVAULT_DEBUG: "{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}"
+        TINYVAULT_APP_NAME: "{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
 
     - name: Wait for containers to be ready
       raw: sleep 45

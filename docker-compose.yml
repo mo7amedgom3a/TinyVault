@@ -8,11 +8,13 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_URL=${DB_URL}
+      - DB_URL=${DB_URL:-sqlite+aiosqlite:///./data/tinyvault.db}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_API_KEY=${ADMIN_API_KEY}
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-      - DEBUG=false
+      - DEBUG=${DEBUG:-false}
+      - EC2_HOST=${EC2_HOST:-localhost}
+      - APP_NAME=${APP_NAME:-TinyVault}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
