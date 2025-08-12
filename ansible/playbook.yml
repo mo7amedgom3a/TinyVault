@@ -48,7 +48,17 @@
         sudo cp -r TinyVault-main/* /opt/tinyvault/
         rm -rf TinyVault-main main.zip
       changed_when: false
-
+    - name: Create .env file for docker-compose
+      copy:
+        dest: /opt/tinyvault/.env
+        content: |
+          DB_URL={{ DB_URL | default('sqlite+aiosqlite:///./data/tinyvault.db') }}
+          TELEGRAM_BOT_TOKEN={{ TELEGRAM_BOT_TOKEN }}
+          ADMIN_API_KEY={{ ADMIN_API_KEY }}
+          WEBHOOK_SECRET={{ WEBHOOK_SECRET }}
+          DEBUG={{ DEBUG | default('false') }}
+          EC2_HOST={{ EC2_HOST | default('localhost') }}
+          APP_NAME={{ APP_NAME | default('TinyVault') }}
   
     - name: Run docker Compose
       shell: |
