@@ -50,42 +50,20 @@
       changed_when: false
 
   
-    - name: Build Docker image
+    - name: Run docker Compose
       raw: |
         cd /opt/tinyvault
-        sudo docker build \
+        sudo docker stop tinyvault-app || true
+        sudo docker rm tinyvault-app || true
+        sudo docker-compose down || true
+        sudo docker-compose build \
           --build-arg ADMIN_API_KEY="{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}" \
           --build-arg DB_URL="{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}" \
           --build-arg TELEGRAM_BOT_TOKEN="{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}" \
           --build-arg WEBHOOK_SECRET="{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}" \
           --build-arg DEBUG="{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}" \
           --build-arg EC2_HOST="{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}" \
-          --build-arg APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}" \
-          -t tinyvault-app .
-      changed_when: true
-
-    - name: Run Docker container
-      raw: |
-        sudo docker stop tinyvault-app || true
-        sudo docker rm tinyvault-app || true
-        sudo docker run -d \
-          --name tinyvault-app \
-          --restart always \
-          -p 80:8000 \
-          -e DB_URL="{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}" \
-          -e TELEGRAM_BOT_TOKEN="{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}" \
-          -e ADMIN_API_KEY="{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}" \
-          -e WEBHOOK_SECRET="{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}" \
-          -e DEBUG="{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}" \
-          -e EC2_HOST="{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}" \
-          -e APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}" \
-          tinyvault-app
-      changed_when: true
-    - name: Run docker Compose
-      raw: |
-        cd /opt/tinyvault
-        sudo docker-compose down || true
-        sudo docker-compose build
+          --build-arg APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
         sudo docker-compose up -d
         
 
