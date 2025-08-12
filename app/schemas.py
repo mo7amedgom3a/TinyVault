@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl, Field, validator
+from pydantic import BaseModel, HttpUrl, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -21,15 +21,17 @@ class ItemBase(BaseModel):
     kind: str
     content: str
     
-    @validator('kind')
+    @field_validator('kind')
+    @classmethod
     def validate_kind(cls, v):
         if v not in ['url', 'note']:
             raise ValueError('kind must be either "url" or "note"')
         return v
     
-    @validator('content')
-    def validate_content(cls, v, values):
-        if values.get('kind') == 'note' and len(v) > 300:
+    @field_validator('content')
+    @classmethod
+    def validate_content(cls, v, info):
+        if info.data.get('kind') == 'note' and len(v) > 300:
             raise ValueError('Note content must be 300 characters or less')
         return v
 
@@ -38,7 +40,8 @@ class ItemBase(BaseModel):
 class SaveItemRequest(BaseModel):
     content: str
     
-    @validator('content')
+    @field_validator('content')
+    @classmethod
     def validate_content(cls, v):
         if not v.strip():
             raise ValueError('Content cannot be empty')
@@ -106,18 +109,14 @@ class ErrorResponse(BaseModel):
 # Telegram message schemas
 class TelegramMessage(BaseModel):
     message_id: int
-    from_user: dict
+    from_user: dict = Field(alias='from')
     chat: dict
     text: Optional[str] = None
     date: int
     
     class Config:
-        fields = {
-            'from_user': 'from',
-            'chat': 'chat',
-            'text': 'text',
-            'date': 'date'
-        }
+        from_attributes = True
+        populate_by_name = True
 
 
 class TelegramUser(BaseModel):

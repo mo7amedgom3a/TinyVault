@@ -241,7 +241,7 @@ migrations/
 ## API Endpoints
 
 ### Telegram Webhook
-- `POST /telegram/webhook` - Handle Telegram bot updates
+- `POST /telegram/webhook/<bot_token>` - Handle Telegram bot updates
 - `GET /telegram/webhook-info` - Get webhook configuration info
 
 ### Admin API (requires `X-API-Key` header)

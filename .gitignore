@@ -2,10 +2,6 @@
 .env
 .env.local
 .env.production
-admin.py 
-item_service.py
-user_service.py
-
 tests/
 requirements.md
 __pycache__/
@@ -37,10 +33,9 @@ ENV/
 env/
 
 # Database
-*.db
-*.sqlite
-*.sqlite3
-data/
+
+
+
 logs/
 
 # IDE

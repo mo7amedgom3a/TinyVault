@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import admin, telegram, diagnostics_router
@@ -29,13 +30,58 @@ async def lifespan(app: FastAPI):
     logger.info("Database connections closed")
 
 
+def custom_openapi():
+    """Custom OpenAPI schema with enhanced documentation."""
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title="TinyVault API",
+        version="1.0.0",
+        description="""
+        # TinyVault API
+        
+        A service for storing and retrieving short notes and links via Telegram bot.
+        
+        ## Authentication
+        
+        ### Admin API
+        The admin endpoints require authentication using an API key in the `X-API-Key` header.
+        
+        **Example:**
+        ```
+        X-API-Key: your_admin_api_key_here
+        ```
+        
+        ### Telegram Webhook
+        Telegram webhook endpoints handle bot updates automatically.
+        
+        ## Getting Started
+        
+        1. Set your bot's webhook URL
+        2. Use the admin API with your API key for administrative operations
+        3. Monitor system health and statistics
+        """,
+        routes=app.routes,
+    )
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
 # Create FastAPI application
 app = FastAPI(
     title="TinyVault",
     description="A service for storing and retrieving short notes and links via Telegram bot",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
+
+# Set custom OpenAPI schema
+app.openapi = custom_openapi
 
 # Add CORS middleware
 app.add_middleware(
@@ -69,6 +115,9 @@ async def root():
             "db": "/db/ping",
             "docs": "/docs",
             "health": "/health"
+        },
+        "authentication": {
+            "admin_api": "X-API-Key header required for /admin endpoints"
         }
     }
 

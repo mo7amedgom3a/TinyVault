@@ -1,5 +1,5 @@
 from typing import AsyncGenerator
-from fastapi import Depends
+from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.data.session_manager import get_db_session
 from app.repositories.user_repository import UserRepository
@@ -55,7 +55,7 @@ async def get_telegram_service(
 
 # Admin API key dependency
 async def verify_admin_api_key(
-    x_api_key: str = Depends(lambda x: x.headers.get("X-API-Key"))
+    x_api_key: str = Header(None, alias="X-API-Key")
 ) -> str:
     """Verify admin API key."""
     from app.utilities.config import settings
