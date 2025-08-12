@@ -43,15 +43,25 @@ jobs:
       - name: Create SSH key file
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/aws_keys.pem
-          chmod 600 ~/aws_keys.pem
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/aws_keys.pem
+          chmod 600 ~/.ssh/aws_keys.pem
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Verify SSH key and test connection
+        run: |
+          # Verify SSH key file exists and has correct permissions
+          ls -la ~/.ssh/aws_keys.pem
+          # Test SSH connection
+          ssh -i ~/.ssh/aws_keys.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "echo 'SSH connection successful'"
           
       - name: Update Ansible inventory with environment variables
         run: |
           cd ansible
-          # Update inventory with the actual EC2 host from secrets
-          sed -i "s/ansible_host: .*/ansible_host: ${{ secrets.EC2_HOST }}/" inventory.yml
+          # Update inventory with the actual EC2 host and SSH key path
+          sed -i "s|ansible_host: .*|ansible_host: ${{ secrets.EC2_HOST }}|" inventory.yml
+          sed -i "s|ansible_ssh_private_key_file: .*|ansible_ssh_private_key_file: ~/.ssh/aws_keys.pem|" inventory.yml
+          # Verify the inventory file
+          cat inventory.yml
           
       - name: Deploy to EC2
         run: |
@@ -59,7 +69,6 @@ jobs:
           ansible-playbook -i inventory.yml playbook.yml -v  
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          SSH_PRIVATE_KEY_PATH: ~/aws_keys.pem
           # Application secrets passed to Ansible
           TINYVAULT_DB_URL: ${{ secrets.DB_URL || 'sqlite+aiosqlite:///./data/tinyvault.db' }}
           TINYVAULT_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -70,4 +79,4 @@ jobs:
           
       - name: Cleanup SSH key
         if: always()
-        run: rm -f ~/aws_keys.pem
+        run: rm -f ~/.ssh/aws_keys.pem
