@@ -51,20 +51,17 @@
 
   
     - name: Run docker Compose
-      raw: |
+      shell: |
         cd /opt/tinyvault
-        sudo docker stop tinyvault-app || true
-        sudo docker rm tinyvault-app || true
-        sudo docker-compose down || true
-        sudo docker-compose build \
-          --build-arg ADMIN_API_KEY="{{ lookup('env', 'TINYVAULT_ADMIN_API_KEY') | default('', true) }}" \
-          --build-arg DB_URL="{{ lookup('env', 'TINYVAULT_DB_URL') | default('sqlite+aiosqlite:///./data/tinyvault.db', true) }}" \
-          --build-arg TELEGRAM_BOT_TOKEN="{{ lookup('env', 'TINYVAULT_TELEGRAM_BOT_TOKEN') | default('', true) }}" \
-          --build-arg WEBHOOK_SECRET="{{ lookup('env', 'TINYVAULT_WEBHOOK_SECRET') | default('', true) }}" \
-          --build-arg DEBUG="{{ lookup('env', 'TINYVAULT_DEBUG') | default('false', true) }}" \
-          --build-arg EC2_HOST="{{ lookup('env', 'EC2_HOST') | default('localhost', true) }}" \
-          --build-arg APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}"
-        sudo docker-compose up -d
+        docker-compose build \
+          --build-arg ADMIN_API_KEY="{{ TINYVAULT_ADMIN_API_KEY }}" \
+          --build-arg DB_URL="{{ TINYVAULT_DB_URL }}" \
+          --build-arg TELEGRAM_BOT_TOKEN="{{ TINYVAULT_TELEGRAM_BOT_TOKEN }}" \
+          --build-arg WEBHOOK_SECRET="{{ TINYVAULT_WEBHOOK_SECRET }}" \
+          --build-arg DEBUG="{{ TINYVAULT_DEBUG }}" \
+          --build-arg EC2_HOST="{{ EC2_HOST }}" \
+          --build-arg APP_NAME="{{ TINYVAULT_APP_NAME }}"
+        docker-compose up -d
         
 
     - name: Wait for container to be ready

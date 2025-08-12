@@ -42,17 +42,16 @@ jobs:
 
       # 4️⃣ Run Ansible Playbook with secret vars
       - name: Run Ansible Playbook
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          TINYVAULT_DB_URL: ${{ secrets.DB_URL || 'sqlite+aiosqlite:///./data/tinyvault.db' }}
-          TINYVAULT_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TINYVAULT_ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-          TINYVAULT_WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
-          TINYVAULT_DEBUG: ${{ secrets.DEBUG || 'false' }}
-          TINYVAULT_APP_NAME: ${{ secrets.APP_NAME || 'TinyVault' }}
         run: |
           cd ansible
-          ansible-playbook -i inventory.yml playbook.yml -v
+          ansible-playbook -i inventory.yml playbook.yml -v \
+            --extra-vars "TINYVAULT_ADMIN_API_KEY='${{ secrets.ADMIN_API_KEY }}' \
+                          TINYVAULT_DB_URL='${{ secrets.DB_URL || 'sqlite+aiosqlite:///./data/tinyvault.db' }}' \
+                          TINYVAULT_TELEGRAM_BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN }}' \
+                          TINYVAULT_WEBHOOK_SECRET='${{ secrets.WEBHOOK_SECRET }}' \
+                          TINYVAULT_DEBUG='${{ secrets.DEBUG || 'false' }}' \
+                          EC2_HOST='${{ secrets.EC2_HOST }}' \
+                          TINYVAULT_APP_NAME='${{ secrets.APP_NAME || 'TinyVault' }}'"
 
       # 5️⃣ Cleanup SSH key
       - name: Cleanup SSH key
