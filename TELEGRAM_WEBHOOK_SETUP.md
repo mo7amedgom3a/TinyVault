@@ -19,8 +19,7 @@ Create a `.env` file in your project root with the following content:
 DB_URL=sqlite+aiosqlite:///./data/tinyvault.db
 
 # Telegram Bot Configuration
-TELEGRAM_BOT_TOKEN=8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo
-
+TELEGRAM_BOT_TOKEN=<token from BotFather>
 # Admin API Configuration
 ADMIN_API_KEY=your_secure_admin_api_key_here
 
@@ -65,15 +64,15 @@ curl http://127.0.0.1:8000/telegram/test-webhook
 
 ### 4.1 Using BotFather (Recommended)
 1. Open Telegram and search for `@BotFather`
-2. Send the command: `/setwebhook https://51d9cd7d5b4d.ngrok-free.app/telegram/webhook/8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo`
+2. Send the command: `/setwebhook https://51d9cd7d5b4d.ngrok-free.app/telegram/webhook/<bot token>`
 
 ### 4.2 Using Direct API Call
 ```bash
-curl -X POST "https://api.telegram.org/bot8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo/setWebhook" \
+curl -X POST "https://api.telegram.org/bot<bot token>/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://51d9cd7d5b4d.ngrok-free.app/telegram/webhook/8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo",
-    "secret_token": "YOUR_WEBHOOK_SECRET_HERE",
+    "url": "https://c2cbde6bb5fd.ngrok-free.app/telegram/webhook/<bot token>",
+    "secret_token": "<secret token from .env>",
     "allowed_updates": ["message", "callback_query"],
     "drop_pending_updates": true
   }'
@@ -83,7 +82,7 @@ curl -X POST "https://api.telegram.org/bot8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMl
 
 ### 5.1 Check webhook status
 ```bash
-curl "https://api.telegram.org/bot8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo/getWebhookInfo"
+curl "https://api.telegram.org/bot<bot token>/getWebhookInfo"
 ```
 
 ### 5.2 Expected response
@@ -91,7 +90,7 @@ curl "https://api.telegram.org/bot8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo
 {
   "ok": true,
   "result": {
-    "url": "https://51d9cd7d5b4d.ngrok-free.app/telegram/webhook/8367963568:AAEMCMEc48q6GcFNc-XGUFd3mMliYoRM8xo",
+    "url": "https://51d9cd7d5b4d.ngrok-free.app/telegram/webhook/<bot token>",
     "has_custom_certificate": false,
     "pending_update_count": 0,
     "last_error_date": 0,
