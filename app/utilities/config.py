@@ -1,22 +1,24 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 class Settings(BaseSettings):
     """Application configuration settings."""
     
     db_url: str = "sqlite+aiosqlite:///./data/tinyvault.db"
     
-    telegram_bot_token: str = "test_token" 
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "test_token")
 
-    admin_api_key: str = "test_admin_key"  
+    admin_api_key: str = os.getenv("ADMIN_API_KEY", "test_admin_key")
     
-    webhook_secret: Optional[str] = None
+    webhook_secret: Optional[str] = os.getenv("WEBHOOK_SECRET")
     
-
     app_name: str = "TinyVault"
-    debug: bool = True  
+    debug: bool = os.getenv("DEBUG", "True").lower() == "true"
     
     class Config:
         env_file = ".env"
@@ -26,4 +28,4 @@ class Settings(BaseSettings):
         
         extra = "ignore"
 
-settings = Settings() 
+settings = Settings()

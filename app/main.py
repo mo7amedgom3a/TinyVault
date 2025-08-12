@@ -63,6 +63,9 @@ async def root():
         "endpoints": {
             "admin": "/admin",
             "telegram": "/telegram",
+            "webhook_setup": "/telegram/set-webhook",
+            "webhook_info": "/telegram/webhook-info",
+            "test_webhook": "/telegram/test-webhook",
             "db": "/db/ping",
             "docs": "/docs",
             "health": "/health"

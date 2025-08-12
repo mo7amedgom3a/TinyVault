@@ -2,8 +2,10 @@
 .env
 .env.local
 .env.production
-api/
-services/
+admin.py 
+item_service.py
+user_service.py
+
 tests/
 requirements.md
 __pycache__/
