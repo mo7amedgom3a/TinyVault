@@ -38,6 +38,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+      
 
       # 4️⃣ Run Ansible Playbook with secret vars
       - name: Run Ansible Playbook
