@@ -451,7 +451,7 @@ class TelegramService:
             
             if not items:
                 return {
-                    "text": "📭 You don't have any saved items yet.\nUse /save <content> to save your first item!",
+                    "text": "📭 You don't have any saved items yet.\n\nUse /save followed by your content to save your first item!\n\nExample: /save https://example.com",
                     "keyboard": self._create_main_menu_keyboard()
                 }
             
