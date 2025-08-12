@@ -43,16 +43,32 @@ jobs:
       - name: Create SSH key file
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/aws_keys.pem
+          # Create SSH key with proper formatting
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/aws_keys.pem
           chmod 600 ~/.ssh/aws_keys.pem
+          # Verify SSH key format
+          head -1 ~/.ssh/aws_keys.pem
+          tail -1 ~/.ssh/aws_keys.pem
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
           
       - name: Verify SSH key and test connection
         run: |
           # Verify SSH key file exists and has correct permissions
           ls -la ~/.ssh/aws_keys.pem
-          # Test SSH connection
-          ssh -i ~/.ssh/aws_keys.pem -o ConnectTimeout=10 -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "echo 'SSH connection successful'"
+          # Check SSH key format is valid
+          ssh-keygen -l -f ~/.ssh/aws_keys.pem
+          
+          # Test SSH connection and determine correct username
+          if ssh -i ~/.ssh/aws_keys.pem -o ConnectTimeout=30 -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "echo 'SSH connection successful with ec2-user'"; then
+            echo "ANSIBLE_USER=ec2-user" >> $GITHUB_ENV
+            echo "✅ SSH connection successful with ec2-user"
+          elif ssh -i ~/.ssh/aws_keys.pem -o ConnectTimeout=30 -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo 'SSH connection successful with ubuntu'"; then
+            echo "ANSIBLE_USER=ubuntu" >> $GITHUB_ENV
+            echo "✅ SSH connection successful with ubuntu"
+          else
+            echo "❌ SSH connection failed with both ec2-user and ubuntu"
+            exit 1
+          fi
           
       - name: Update Ansible inventory with environment variables
         run: |
@@ -69,6 +85,7 @@ jobs:
           ansible-playbook -i inventory.yml playbook.yml -v  
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
+          ANSIBLE_USER: ${{ env.ANSIBLE_USER }}
           # Application secrets passed to Ansible
           TINYVAULT_DB_URL: ${{ secrets.DB_URL || 'sqlite+aiosqlite:///./data/tinyvault.db' }}
           TINYVAULT_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

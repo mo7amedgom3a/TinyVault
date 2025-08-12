@@ -72,4 +72,35 @@ After setting up the secrets:
 
 - **SSH Connection Failed**: Check that `EC2_HOST` and `SSH_PRIVATE_KEY` are correct
 - **Deployment Failed**: Check the Actions logs for specific error messages
-- **Application Not Accessible**: Verify EC2 security groups allow HTTP traffic on port 8000 
+- **Application Not Accessible**: Verify EC2 security groups allow HTTP traffic on port 8000
+
+### SSH Key Issues
+
+If you encounter "Permission denied (publickey)" errors:
+
+1. **Verify SSH Key Format**: Ensure your private key includes the complete content:
+   ```
+   -----BEGIN RSA PRIVATE KEY-----
+   [your private key content]
+   -----END RSA PRIVATE KEY-----
+   ```
+   
+2. **Check Key Permissions**: The key file should have 600 permissions (the workflow handles this automatically)
+
+3. **Verify Key Association**: Ensure the private key corresponds to the public key associated with your EC2 instance
+
+4. **Test Key Locally**: Before adding to GitHub secrets, test the key locally:
+   ```bash
+   ssh -i /path/to/your/key.pem ec2-user@YOUR_EC2_IP
+   ssh -i /path/to/your/key.pem ubuntu@YOUR_EC2_IP  # try both usernames
+   ```
+
+5. **Common Issues**:
+   - **Wrong Username**: The workflow automatically detects whether to use `ec2-user` or `ubuntu`
+   - **Key Format**: Ensure no extra spaces or characters in the GitHub secret
+   - **Line Endings**: The workflow automatically handles Windows/Unix line ending issues
+   - **Key Mismatch**: Verify this is the correct key for your EC2 instance
+
+6. **Security Group**: Ensure your EC2 security group allows SSH (port 22) from GitHub Actions IPs:
+   - Add rule: Type: SSH, Protocol: TCP, Port: 22, Source: 0.0.0.0/0 (for testing)
+   - For production, restrict to specific IP ranges 
