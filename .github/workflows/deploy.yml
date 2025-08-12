@@ -40,42 +40,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible
           
-      - name: Create SSH key file
+      - name: Setup SSH key
         run: |
-          mkdir -p ~/.ssh
-          # Create SSH key with proper formatting
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/aws_keys.pem
-          chmod 600 ~/.ssh/aws_keys.pem
-          # Verify SSH key format
-          head -1 ~/.ssh/aws_keys.pem
-          tail -1 ~/.ssh/aws_keys.pem
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-          
-      - name: Verify SSH key and test connection
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/aws_keys.pem
+          chmod 600 ~/aws_keys.pem
+          echo "SSH key permissions: $(ls -la ~/aws_keys.pem)"
+
+      - name: Test SSH connection
         run: |
-          # Verify SSH key file exists and has correct permissions
-          ls -la ~/.ssh/aws_keys.pem
-          # Check SSH key format is valid
-          ssh-keygen -l -f ~/.ssh/aws_keys.pem
-          
-          # Test SSH connection and determine correct username
-          if ssh -i ~/.ssh/aws_keys.pem -o ConnectTimeout=30 -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} "echo 'SSH connection successful with ec2-user'"; then
-            echo "ANSIBLE_USER=ec2-user" >> $GITHUB_ENV
-            echo "✅ SSH connection successful with ec2-user"
-          elif ssh -i ~/.ssh/aws_keys.pem -o ConnectTimeout=30 -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo 'SSH connection successful with ubuntu'"; then
-            echo "ANSIBLE_USER=ubuntu" >> $GITHUB_ENV
-            echo "✅ SSH connection successful with ubuntu"
-          else
-            echo "❌ SSH connection failed with both ec2-user and ubuntu"
-            exit 1
-          fi
+          ssh -i ~/aws_keys.pem -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "echo 'SSH connection successful'"
           
       - name: Update Ansible inventory with environment variables
         run: |
           cd ansible
           # Update inventory with the actual EC2 host and SSH key path
           sed -i "s|ansible_host: .*|ansible_host: ${{ secrets.EC2_HOST }}|" inventory.yml
-          sed -i "s|ansible_ssh_private_key_file: .*|ansible_ssh_private_key_file: ~/.ssh/aws_keys.pem|" inventory.yml
+          sed -i "s|ansible_ssh_private_key_file: .*|ansible_ssh_private_key_file: ~/aws_keys.pem|" inventory.yml
           # Verify the inventory file
           cat inventory.yml
           
@@ -96,4 +76,4 @@ jobs:
           
       - name: Cleanup SSH key
         if: always()
-        run: rm -f ~/.ssh/aws_keys.pem
+        run: rm -f ~/aws_keys.pem
