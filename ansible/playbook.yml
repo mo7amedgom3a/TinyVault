@@ -81,6 +81,13 @@
           -e APP_NAME="{{ lookup('env', 'TINYVAULT_APP_NAME') | default('TinyVault', true) }}" \
           tinyvault-app
       changed_when: true
+    - name: Run docker Compose
+      raw: |
+        cd /opt/tinyvault
+        sudo docker-compose down || true
+        sudo docker-compose build
+        sudo docker-compose up -d
+        
 
     - name: Wait for container to be ready
       pause:
