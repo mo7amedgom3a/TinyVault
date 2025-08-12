@@ -2,71 +2,18 @@ version: '3.8'
 
 services:
   app:
-    build: 
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: tinyvault-app
     ports:
       - "8000:8000"
     environment:
       - DB_URL=sqlite+aiosqlite:///./data/tinyvault.db
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-dev}
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
       - DEBUG=${DEBUG:-false}
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
     restart: unless-stopped
-    networks:
-      - tinyvault-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    labels:
-      - "com.tinyvault.description=TinyVault Application Service"
-      - "com.tinyvault.version=1.0"
-
-  db:
-    image: alpine:latest
-    container_name: tinyvault-db
-    command: >
-      sh -c "
-        apk add --no-cache sqlite curl &&
-        mkdir -p /data &&
-        sqlite3 /data/tinyvault.db < /init/init.sql &&
-        echo 'Database initialized successfully' &&
-        tail -f /dev/null
-      "
-    volumes:
-      - ./data:/data
-      - ./init.sql:/init/init.sql
-    restart: unless-stopped
-    networks:
-      - tinyvault-network
-    healthcheck:
-      test: ["CMD", "sqlite3", "/data/tinyvault.db", "SELECT 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    labels:
-      - "com.tinyvault.description=TinyVault SQLite Database"
-      - "com.tinyvault.version=1.0"
-
-networks:
-  tinyvault-network:
-    driver: bridge
-    name: tinyvault-network
-
-volumes:
-  data:
-    driver: local
-  logs:
-    driver: local 
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000" 

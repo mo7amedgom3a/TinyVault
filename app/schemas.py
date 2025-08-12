@@ -8,6 +8,15 @@ class UserBase(BaseModel):
     telegram_user_id: int
 
 
+# Minimal user schemas for service imports
+class UserCreate(UserBase):
+    pass
+
+
+class UserUpdate(BaseModel):
+    telegram_user_id: Optional[int] = None
+
+
 class ItemBase(BaseModel):
     kind: str
     content: str
