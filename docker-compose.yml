@@ -12,6 +12,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+    network_mode: host
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
